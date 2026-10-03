@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jadwal Ngajar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>📚 Jadwal Ngajar</h1><div class="sub" id="sub"></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button id="exp">Export</button>
+      <button id="imp">Import</button>
+      <button class="p" id="add">+ Tambah Jadwal</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Cari tutor / mapel / materi…">
+    <select id="fm"><option value="">Semua mapel</option></select>
+    <select id="fs"><option value="">Semua status</option><option value="1">Terlaksana</option><option value="0">Belum</option></select>
+  </div>
+  <div class="sub" id="pt"></div>
+  <div class="prog"><i id="pb"></i></div>
+  <div class="tw"><table><thead><tr>
+    <th>Tanggal</th><th>Hari</th><th>Tutor</th><th>Jam</th><th>Mapel</th><th>Materi</th><th>Pertemuan</th><th>Status</th><th></th>
+  </tr></thead><tbody id="tb"></tbody></table><div class="empty" id="em" hidden>Belum ada jadwal. Klik “+ Tambah Jadwal”.</div></div>
+  <div class="sub" style="margin-top:10px">Data tersimpan di browser ini. Pakai Export/Import untuk pindah perangkat atau backup.</div>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="fm2">
+  <h3 id="dt" style="margin:0">Tambah Jadwal</h3>
+  <label>Program</label><select id="fp"></select>
+  <div class="row2"><div><label>Tanggal</label><input type="date" id="fd" required></div>
+  <div><label>Jam</label><input type="time" id="fj" value="19:00" required></div></div>
+  <label>Tutor</label><input id="ft" required>
+  <label>Mapel</label><input id="fma" list="ml" required><datalist id="ml"></datalist>
+  <label>Materi</label><input id="fmt" required>
+  <label>Pertemuan</label><input id="fpe" list="pl" placeholder="mis. P1 - Materi"><datalist id="pl">
+    <option value="P1 - Materi"><option value="P2 - Latihan Soal &amp; Tugas"><option value="P3 - Pematangan Materi"><option value="P1 - Pengenalan Materi &amp; Konsep Dasar"></datalist>
+  <div class="fa"><button type="button" id="cx">Batal</button><button class="p" value="ok">Simpan</button></div>
+</form></dialog>
+<input type="file" id="file" accept="application/json" hidden>
+
+<script>
+const KEY="jadwal-ngajar-v1";
+const PROG={smp1:"TKA SMP Batch 1",smp2:"TKA SMP Batch 2",sma:"SMA"};
+const HARI=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+const BLN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+let id=0;const mk=(p,d,t,m,mt,pe,ok=1)=>({id:++id,p,d,j:"19:00",t,m,mt,pe,ok});
+const P1="P1 - Materi",P2="P2 - Latihan Soal & Tugas",P3="P3 - Pematangan Materi";
+const S1="P1 - Pengenalan Materi & Konsep Dasar";
+const seed=[
+mk("smp1","2026-09-01","Debora","IPA","Sistem Organ & Ekosistem",P3),
+mk("smp1","2026-09-03","Didar","Bahasa Inggris","Advertisement & Greeting Card/Letter",P3),
+mk("smp1","2026-09-05","Nayla","Bahasa Indonesia","Teks Narasi & Deskripsi (struktur & ciri kebahasaan)",P1),
+mk("smp1","2026-09-08","Talitha","Matematika","Operasi Bentuk Aljabar & Pemfaktoran/Bentuk Kuadrat",P1),
+mk("smp1","2026-09-10","Iqbal","IPA","Hereditas (Dasar Pewarisan Sifat)",P1),
+mk("smp1","2026-09-12","Pascal","Bahasa Inggris","Narrative Text (plot, character, setting, moral value)",P1),
+mk("smp1","2026-09-15","Wulan","Bahasa Indonesia","Teks Narasi & Deskripsi (struktur & ciri kebahasaan)",P2),
+mk("smp1","2026-09-17","Lia","Matematika","Operasi Bentuk Aljabar & Pemfaktoran/Bentuk Kuadrat",P2),
+mk("smp1","2026-09-19","Debora","IPA","Hereditas (Dasar Pewarisan Sifat)",P2),
+mk("smp1","2026-09-22","Fauzan","Bahasa Inggris","Narrative Text (plot, character, setting, moral value)",P2),
+mk("smp1","2026-09-24","Wulan","Bahasa Indonesia","Teks Narasi & Deskripsi (struktur & ciri kebahasaan)",P3),
+mk("smp1","2026-09-26","Chlea","Matematika","Operasi Bentuk Aljabar & Pemfaktoran/Bentuk Kuadrat",P3),
+mk("smp1","2026-09-29","Iqbal","IPA","Hereditas (Dasar Pewarisan Sifat)",P3),
+mk("smp1","2026-10-03","Pascal","Bahasa Inggris","Advertisement & Greeting Card/Letter","P3 - Push Latihan Soal"),
+mk("smp1","2026-10-06","Debora","Bahasa Indonesia","Teks Narasi & Deskripsi (struktur & ciri kebahasaan)","P2 - Pematangan & Latihan Soal"),
+mk("sma","2026-09-02","Talitha","Bahasa Inggris","Recount Text (Personal Experience)",S1),
+mk("sma","2026-09-04","Nayla","Bahasa Indonesia","Teks Anekdot",S1),
+mk("sma","2026-09-07","Lia","Matematika","Logaritma",S1),
+mk("sma","2026-09-09","Kevin","Biologi","Keanekaragaman Hayati Indonesia",S1),
+mk("sma","2026-09-11","Iqbal","Fisika","Notasi Ilmiah & Angka Penting",S1),
+mk("sma","2026-09-14","Sherina","Ekonomi","Sistem Ekonomi",S1),
+mk("sma","2026-09-16","Pascal","Bahasa Inggris","Recount Text (Personal Experience)",P2),
+mk("sma","2026-09-18","Wulan","Bahasa Indonesia","Teks Anekdot",P2),
+mk("sma","2026-09-21","Lia","Matematika","Logaritma",P2),
+mk("sma","2026-09-23","Debora","Biologi","Keanekaragaman Hayati Indonesia",P2),
+mk("sma","2026-09-25","Iqbal","Fisika","Notasi Ilmiah & Angka Penting",P2),
+mk("sma","2026-09-28","Sherina","Ekonomi","Sistem Ekonomi",P2),
+mk("sma","2026-09-30","Pascal","Bahasa Inggris","Narrative Text (Legend/Fable)",S1)
+];
+let data=[],tab="smp1",editId=null;
+try{const s=localStorage.getItem(KEY);data=s?JSON.parse(s):seed}catch(e){data=seed}
+if(!Array.isArray(data))data=seed;
+id=Math.max(0,...data.map(x=>x.id||0));
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}};
+const $=s=>document.getElementById(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pd=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const fd=s=>{const x=pd(s);return `${x.getDate()} ${BLN[x.getMonth()]} ${x.getFullYear()}`};
+const hue=s=>{let h=0;for(const c of s.toLowerCase())h=(h*31+c.charCodeAt(0))%360;return h};
+const today=(()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`})();
+
+function render(){
+  $("tabs").innerHTML=Object.entries(PROG).map(([k,v])=>`<button class="tab ${k===tab?"on":""}" data-t="${k}">${v} (${data.filter(x=>x.p===k).length})</button>`).join("");
+  const all=data.filter(x=>x.p===tab);
+  const maps=[...new Set(all.map(x=>x.m))].sort();
+  const cur=$("fm").value;
+  $("fm").innerHTML='<option value="">Semua mapel</option>'+maps.map(m=>`<option ${m===cur?"selected":""}>${esc(m)}</option>`).join("");
+  const q=$("q").value.toLowerCase(),fm=$("fm").value,fs=$("fs").value;
+  const rows=all.filter(x=>(!fm||x.m===fm)&&(fs===""||String(x.ok?1:0)===fs)&&(!q||[x.t,x.m,x.mt,x.pe].join(" ").toLowerCase().includes(q)))
+    .sort((a,b)=>a.d.localeCompare(b.d)||a.j.localeCompare(b.j));
+  const done=all.filter(x=>x.ok).length;
+  $("pt").textContent=`${done} dari ${all.length} sesi terlaksana`;
+  $("pb").style.width=all.length?done/all.length*100+"%":"0";
+  $("sub").textContent=`${data.length} sesi total · ${PROG[tab]}`;
+  $("em").hidden=rows.length>0;
+  $("tb").innerHTML=rows.map(x=>`<tr class="r ${x.d===today?"today":""} ${x.ok?"done":""}" style="--h:${hue(x.m)}">
+    <td>${fd(x.d)}</td><td>${HARI[pd(x.d).getDay()]}</td><td>${esc(x.t)}</td><td>${esc(x.j.replace(":","."))}</td>
+    <td>${esc(x.m)}</td><td class="mt">${esc(x.mt)}</td><td>${esc(x.pe)}</td>
+    <td><span class="chip ${x.ok?"y":""}" data-k="${x.id}">${x.ok?"Terlaksana":"Belum"}</span></td>
+    <td class="acts"><button data-e="${x.id}">Edit</button> <button class="d" data-x="${x.id}">Hapus</button></td></tr>`).join("");
+}
+function open_(x){
+  editId=x?x.id:null;
+  $("dt").textContent=x?"Edit Jadwal":"Tambah Jadwal";
+  $("fp").innerHTML=Object.entries(PROG).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  const all=[...new Set(data.map(d=>d.m))];
+  $("ml").innerHTML=all.map(m=>`<option value="${esc(m)}">`).join("");
+  const v=x||{p:tab,d:today,j:"19:00",t:"",m:"",mt:"",pe:""};
+  $("fp").value=v.p;$("fd").value=v.d;$("fj").value=v.j;$("ft").value=v.t;$("fma").value=v.m;$("fmt").value=v.mt;$("fpe").value=v.pe;
+  $("dlg").showModal();
+}
+$("add").onclick=()=>open_();
+$("cx").onclick=()=>$("dlg").close();
+$("fm2").addEventListener("submit",e=>{
+  if(e.submitter&&e.submitter.value!=="ok")return;
+  const o={p:$("fp").value,d:$("fd").value,j:$("fj").value,t:$("ft").value.trim(),m:$("fma").value.trim(),mt:$("fmt").value.trim(),pe:$("fpe").value.trim()};
+  if(editId){Object.assign(data.find(x=>x.id===editId),o)}else{data.push({id:++id,ok:0,...o})}
+  tab=o.p;save();render();
+});
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(t.dataset.t){tab=t.dataset.t;render()}
+  if(t.dataset.k){const x=data.find(d=>d.id==t.dataset.k);x.ok=x.ok?0:1;save();render()}
+  if(t.dataset.e)open_(data.find(d=>d.id==t.dataset.e));
+  if(t.dataset.x&&confirm("Hapus jadwal ini?")){data=data.filter(d=>d.id!=t.dataset.x);save();render()}
+});
+["q","fm","fs"].forEach(i=>$(i).addEventListener("input",render));
+$("exp").onclick=()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));
+  a.download="jadwal-ngajar.json";a.click();
+};
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{try{const j=JSON.parse(t);if(!Array.isArray(j))throw 0;data=j;id=Math.max(0,...j.map(x=>x.id||0));save();render()}catch(_){alert("File tidak valid")}});
+  e.target.value="";
+};
+render();
+</script>
+</body>
+</html>
